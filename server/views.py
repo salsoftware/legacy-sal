@@ -38,6 +38,17 @@ def index(request):
         
         profile.level = 'GA'
         profile.save()
+    else:
+        # Create profile for LDAP users if they need one.
+        try:
+            profile = UserProfile.objects.get(user=user)
+            if profile.level is None:
+                profile.level = 'SO'
+                profile.save()
+        except UserProfile.DoesNotExist:
+            profile = UserProfile(user=user)
+            profile.level = 'SO'
+            profile.save()
     user_level = user.userprofile.level
     now = datetime.now()
     hour_ago = now - timedelta(hours=1)
