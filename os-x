@@ -1,0 +1,179 @@
+Installation on Mac OS X Server
+=====================
+This document assumes Mac OS X 10.8.4 or better, with Server.app installed. The instructions are largely based on the [Setting up MunkiWebAdmin on OS X](https://code.google.com/p/munki/wiki/MunkiWebAdminOSXSetup) by Greg Neagle.
+Additional information gleaned from [Running Django webapps with OS X Server.app](http://jelockwood.blogspot.com/2013/06/running-django-webapps-with-os-x.html) and [Running Crypt Server on a Mac via Server.app](http://jelockwood.blogspot.com/2013/07/running-crypt-server-on-mac-via.html) by John Lockwood.
+=====================
+This is a work-in-progress, and should not be considered complete! Do not attempt on production servers!
+=====================
+
+##Install Prerequisites
+###Setup the Virtual Environment
+
+Install Xcode, or at least the Command Line Tools for Xcode if they are available. Make sure to get the right one for your version of OS X. These can be found on developer.apple.com. Xcode can be found on the Mac App Store. (Specifically you need git, so you might be able to get by with just a git install...)
+	
+Make sure virtualenv is installed
+
+	virtualenv --version
+	
+If it's not, install it:
+
+	sudo easy_install virtualenv==1.10.1
+
+###Create a non-admin service account and group
+It's not a good idea to run the Sal webapp as root, and you probably don't want to run it as an existing user (like yourself). So we will create a dedicated service account for this application.
+
+Create the saluser account:
+
+Open System Preferences and go to Users & Groups.
+Create a Standard user named saluser.
+(We're using the Users & Groups or Accounts preference pane to create the user so that an unused UID and useful defaults will be assigned automatically. If you want to create the user via command-line, feel free, but make sure all the required attributes are populated! The details are not documented here.)
+
+Create the Sal group:
+
+	sudo dseditgroup -o create -n . salgroup
+	
+Add saluser to the salgroup group:
+
+	sudo dseditgroup -o edit -a saluser -t user salgroup
+
+##Create the virtual environment
+When a virtualenv is created, pip will also be installed to manage a virtualenv's local packages. Create a virtualenv which will handle installing Django in a contained environment. In this example we'll create a virtualenv for Sal at /usr/local. This should be run from Bash, as this is what the virtualenv activate script expects.
+
+Go to where we're going to install the virtualenv:
+
+	 cd /usr/local
+	 
+Create the virtualenv for Sal:
+	
+	sudo virtualenv sal_env
+	
+Make sure saluser has permissions to the new sal_env folder:
+
+	sudo chgrp -R salgroup sal_env
+	sudo chmod -R g+rw sal_env
+	
+Switch to the service account:
+	
+	su saluser
+	
+Virtualenv needs to be run from a bash prompt, so let's switch to one (if you've changed the default):
+
+	bash
+	
+Now we can activate the virtualenv:
+	
+	cd sal_env
+	source bin/activate
+	
+##Copy and configure Sal
+Still inside the sal_env virtualenv, use git to clone the current version of Sal
+
+	git clone https://github.com/grahamgilbert/sal.git sal
+
+Now we need to get the other components for Sal (Django, etc)
+
+	pip install -r sal/setup/requirements.txt
+	
+Next we need to make a copy of the example_settings.py file and put in your info:
+
+	cd sal/sal
+	cp example_settings.py settings.py
+	
+Edit settings.py:
+
+* Set ADMINS to an administrative name and email
+* Set TIME_ZONE to the appropriate timezone
+* Modify DISPLAY_NAME to what you want the header to be
+* This is enough to get you going. See [Settings.md](https://github.com/grahamgilbert/sal/blob/master/docs/Settings.md) for more options in detail.
+
+###More Setup
+We need to use Django's manage.py to initialise the app's database and create an admin user. Running the syncdb command will ask you to create an admin user - make sure you do this! If you are running Sal in a large environment, it is recommended you use MySQL rather than the default SQLite database. If this is the case, follow the [guide on setting up MySQL before continuing](https://github.com/grahamgilbert/sal/blob/master/docs/Using_mysql_on_ubuntu.md).
+
+	cd ..
+	python manage.py syncdb
+	python manage.py migrate
+	
+Stage the static files (type yes when prompted)
+	
+	python manage.py collectstatic
+	
+To make sure no one can log in with this account interactively, we will change a few attributes in the user record. Run the following commands in Terminal:
+
+	sudo dscl . create /Users/saluser home /var/empty
+	sudo dscl . create /Users/saluser passwd *
+		
+##Set up an Apache virtualhost
+You will probably need to edit some of these bits to suit your environment:
+
+	sudo nano /Library/Server/Web/Config/apache2/httpd_sal.conf
+	
+And then enter something like:
+
+	<VirtualHost *:80>
+	ServerName sal.yourdomain.com
+   	WSGIScriptAlias / /usr/local/sal_env/sal/sal.wsgi
+   	WSGIDaemonProcess sal user=saluser group=salgroup
+   	Alias /static/ /usr/local/sal_env/sal/static/
+   	<Directory /usr/local/sal_env/sal>
+    	   WSGIProcessGroup sal
+       		WSGIApplicationGroup %{GLOBAL}
+       		Order deny,allow
+       		Allow from all
+   	</Directory>
+	</VirtualHost>
+	
+Next create the files needed to allow Server.app to manage the site:
+
+	sudo nano /Library/Server/Web/Config/apache2/webapps/com.grahamgilbert.sal.wsgi.plist
+	
+With the following contents (adjust for your environment accordingly):
+
+	<?xml version="1.0" encoding="UTF-7"?>
+	<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+	<plist version="1.0">
+	<dict>
+		<key>name</key>
+		<string>com.grahamgilbert.sal.wsgi</string>
+		<key>displayName</key>
+		<string>Sal - Reporting Dashboard for Munki</string>
+		<key>launchKeys</key>
+		<array/>
+		<key>proxies</key>
+		<dict/>
+		<key>installationIndicatorFilePath</key>
+		<string>/usr/local/sal_env/sal/sal.wsgi</string>
+		<key>includeFiles</key>
+		<array>
+			<string>/Library/Server/Web/Config/apache2/httpd_sal.conf</string>
+		</array>
+		<key>requiredModuleNames</key>
+		<array>
+			<string>wsgi_module</string>
+		</array>
+	</dict>
+	</plist>
+	
+Finally, "create" the website in Server.app which will host your webapp. This is pretty much the same process as creating a normal website but with the additional step that you click on the ‘Edit Advanced Settings…’ button in the new website and enable the entry for your webapp that should hopefully now be listed. These steps will replace the normal "root" of the Server's Websites tool. Skip to step 3 of this section for more information
+
+	1. Launch Server.app and go to the webserver service. Create a new website using the machine's hostname. Leave it using the standard port 80 and all IP addresses settings. Click on the Edit button next to Aliases and add a rule to map from a path of /static/ to a folder (any folder) we will be manually editing this later because Server.app does not let you browse to /usr/local where we need it to point to.
+	2. You should now quit Server.app for now, do not start the webservice yet. Next we want to manually edit the apache conf file corresponding to the website you have just created. This will be located in /Library/Server/Web/Config/apache2/sites/ it will have a name something like 0000_any_80_sal.example.com.conf the exact name will depend on the host name you are using. You need to edit this in Terminal.app using your favourite editor. You want to set the line beginning with DocumentRoot (the fourth line typically) to the following
+
+			DocumentRoot "/usr/local/sal_env/sal"
+
+		You also want to set the line beginning with <Directory similarly as follows
+
+			<Directory "/usr/local/sal_env/sal">
+ 
+		Finally we want to edit the line beginning Alias /static/ it will be at the bottom of this file, change it to the following
+ 
+			Alias /static/ "/static/ /usr/local/sal_env/sal/static/"
+
+		We have to do this manually because the files for Sal Server are not in the normal websites folder location, and because in Server.app you cannot browse and set the location to somewhere in /usr/local/ as this is 'hidden' from view.
+
+
+The standard Ubuntu instructions tell you to run the website with an additional user account setup specifically for it and that you need to add an additional command to the apache conf file you have just edited above. I could not get those instructions to work with Server.app but fortunately it is not necessary to do so. If you follow the instructions here the website will run successfully with the standard _www account. You do need however to set the ownership of the Sal Server files to _www so that the standard account can access and modify the Sal Server database. To do this issue the following command
+
+	sudo chown -R _www /usr/local/sal_env
+	
+You can now open Server.app again. Go to the webserver service and select the website you previously added above. Edit the website by clicking on the pencil button, scroll down and click on the 'Edit Advanced Settings...' button. You should now see a list of available webapps, the one you want to enable (tick) is the 'Sal - Reporting Dashboard for Munki'. This corresponds to the webapp that you have just installed and defined and this will run the Sal Server webapp when you access this website. Then click OK and then click Done. You can now start the websites service.
+	
