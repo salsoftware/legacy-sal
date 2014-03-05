@@ -97,83 +97,51 @@ Stage the static files (type yes when prompted)
 	
 	python manage.py collectstatic
 	
+Test the web service
+	
+	python manage.py runserver 0.0.0.0:8000
+	
+	You should be able to access Sal at 127.0.0.1:8000, logging in with the account you created earlier. Once you are satisfied, return to the Terminal session and enter Ctrl-C to end the test process. See below for instructions in creating a persistent process in its own environment.
+	
 To make sure no one can log in with this account interactively, we will change a few attributes in the user record. Run the following commands in Terminal:
 
 	sudo dscl . create /Users/saluser home /var/empty
 	sudo dscl . create /Users/saluser passwd *
-		
-##Set up an Apache virtualhost
-You will probably need to edit some of these bits to suit your environment:
-
-	sudo nano /Library/Server/Web/Config/apache2/httpd_sal.conf
-	
-And then enter something like:
-
-	<VirtualHost *:80>
-	ServerName sal.yourdomain.com
-   	WSGIScriptAlias / /usr/local/sal_env/sal/sal.wsgi
-   	WSGIDaemonProcess sal user=saluser group=salgroup
-   	Alias /static/ /usr/local/sal_env/sal/static/
-   	<Directory /usr/local/sal_env/sal>
-    	   WSGIProcessGroup sal
-       		WSGIApplicationGroup %{GLOBAL}
-       		Order deny,allow
-       		Allow from all
-   	</Directory>
-	</VirtualHost>
-	
-Next create the files needed to allow Server.app to manage the site:
-
-	sudo nano /Library/Server/Web/Config/apache2/webapps/com.grahamgilbert.sal.wsgi.plist
-	
-With the following contents (adjust for your environment accordingly):
-
-	<?xml version="1.0" encoding="UTF-7"?>
-	<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-	<plist version="1.0">
-	<dict>
-		<key>name</key>
-		<string>com.grahamgilbert.sal.wsgi</string>
-		<key>displayName</key>
-		<string>Sal - Reporting Dashboard for Munki</string>
-		<key>launchKeys</key>
-		<array/>
-		<key>proxies</key>
-		<dict/>
-		<key>installationIndicatorFilePath</key>
-		<string>/usr/local/sal_env/sal/sal.wsgi</string>
-		<key>includeFiles</key>
-		<array>
-			<string>/Library/Server/Web/Config/apache2/httpd_sal.conf</string>
-		</array>
-		<key>requiredModuleNames</key>
-		<array>
-			<string>wsgi_module</string>
-		</array>
-	</dict>
-	</plist>
-	
-Finally, "create" the website in Server.app which will host your webapp. This is pretty much the same process as creating a normal website but with the additional step that you click on the ‘Edit Advanced Settings…’ button in the new website and enable the entry for your webapp that should hopefully now be listed. These steps will replace the normal "root" of the Server's Websites tool. Skip to step 3 of this section for more information
-
-	1. Launch Server.app and go to the webserver service. Create a new website using the machine's hostname. Leave it using the standard port 80 and all IP addresses settings. Click on the Edit button next to Aliases and add a rule to map from a path of /static/ to a folder (any folder) we will be manually editing this later because Server.app does not let you browse to /usr/local where we need it to point to.
-	2. You should now quit Server.app for now, do not start the webservice yet. Next we want to manually edit the apache conf file corresponding to the website you have just created. This will be located in /Library/Server/Web/Config/apache2/sites/ it will have a name something like 0000_any_80_sal.example.com.conf the exact name will depend on the host name you are using. You need to edit this in Terminal.app using your favourite editor. You want to set the line beginning with DocumentRoot (the fourth line typically) to the following
-
-			DocumentRoot "/usr/local/sal_env/sal"
-
-		You also want to set the line beginning with <Directory similarly as follows
-
-			<Directory "/usr/local/sal_env/sal">
- 
-		Finally we want to edit the line beginning Alias /static/ it will be at the bottom of this file, change it to the following
- 
-			Alias /static/ "/static/ /usr/local/sal_env/sal/static/"
-
-		We have to do this manually because the files for Sal Server are not in the normal websites folder location, and because in Server.app you cannot browse and set the location to somewhere in /usr/local/ as this is 'hidden' from view.
 
 
-The standard Ubuntu instructions tell you to run the website with an additional user account setup specifically for it and that you need to add an additional command to the apache conf file you have just edited above. I could not get those instructions to work with Server.app but fortunately it is not necessary to do so. If you follow the instructions here the website will run successfully with the standard _www account. You do need however to set the ownership of the Sal Server files to _www so that the standard account can access and modify the Sal Server database. To do this issue the following command
+##Configure a LaunchDaemon to run Sal
 
-	sudo chown -R _www /usr/local/sal_env
-	
-You can now open Server.app again. Go to the webserver service and select the website you previously added above. Edit the website by clicking on the pencil button, scroll down and click on the 'Edit Advanced Settings...' button. You should now see a list of available webapps, the one you want to enable (tick) is the 'Sal - Reporting Dashboard for Munki'. This corresponds to the webapp that you have just installed and defined and this will run the Sal Server webapp when you access this website. Then click OK and then click Done. You can now start the websites service.
-	
+Create the following as /Library/LaunchDaemons/com.grahamgilbert.sal.plist
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.grahamgilbert.sal</string>
+        <key>ProgramArguments</key>
+        <array>
+                <string>/usr/local/sal_env/bin/python</string>
+                <string>/usr/local/sal_env/sal/manage.py</string>
+                <string>runserver</string>
+                <string>0.0.0.0:8000</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/usr/local/sal_env/log/sal.log</string>
+        <key>StandardOutPath</key>
+        <string>/usr/local/sal_env/log/sal.log</string>
+        <key>UserName</key>
+        <string>saluser</string>
+</dict>
+</plist>
+
+Set ownership of the plist to root:wheel and mode to 644.
+
+Restart the server or you can manually load it with:
+
+	sudo launchctl load /Library/LaunchDaemons/com.grahamgilbert.sal.plist
+
