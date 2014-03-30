@@ -2,7 +2,7 @@
 from models import *
 from django.contrib.auth.decorators import login_required, permission_required
 from django.template import RequestContext, Template, Context
-from django.utils import simplejson, timezone
+from django.utils import simplejson
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import HttpResponse, Http404
 from django.contrib.auth.models import Permission, User
@@ -596,13 +596,23 @@ def checkin(request):
         if 'Facter' in report_data:
             facts = machine.fact_set.all()
             facts.delete()
+            # Delete old historical facts
+            try:
+                datelimit = datetime.now() - timedelta(days=settings.HISTORICAL_DAYS)
+                HistoricalFact.objects.filter(machine=machine, fact_recorded__lt=datelimit).delete()
+            except Exception:
+                pass
+            try:
+                historical_facts = settings.HISTORICAL_FACTS
+            except Exception:
+                historical_facts = []
+                pass
             # now we need to loop over the submitted facts and save them
             for fact_name, fact_data in report_data['Facter'].iteritems():
-                if fact_name.find("historical_") == 0:
-                    fact = HistoricalFact(machine=machine, fact_name=fact_name[11:], fact_data=fact_data, fact_recorded=timezone.now())
-                    fact.save()
-                else:
-                    fact = Fact(machine=machine, fact_name=fact_name, fact_data=fact_data)
+                fact = Fact(machine=machine, fact_name=fact_name, fact_data=fact_data)
+                fact.save()
+                if fact_name in historical_facts:
+                    fact = HistoricalFact(machine=machine, fact_name=fact_name, fact_data=fact_data, fact_recorded=datetime.now())
                     fact.save()
         
         if 'Conditions' in report_data:

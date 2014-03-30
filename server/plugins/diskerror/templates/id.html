@@ -1,0 +1,23 @@
+<div class="span4">
+    <legend>{{ title }}</legend>
+    <table class="table table-striped table-condensed table-bordered">
+        <tr>
+            <td>{% if warnings %}<a href="{% url 'machine_list_id' 'DiskError' 'warnings' page theid %}">{% endif %}
+                Machines with errors in last 90 days
+                <span class="badge badge-warning pull-right">
+                    {{ warnings }}
+                </span>
+                {% if warnings %}</a>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {% if errors %}<a href="{% url 'machine_list_id' 'DiskError' 'errors' page theid %}">{% endif %}
+                Machines with errors in last 30 days
+                <span class="badge badge-important pull-right">
+                    {{ errors }}
+                </span>
+            </td>
+        </tr>
+    </table>
+</div>
