@@ -1,0 +1,147 @@
+Installation on Mac OS X Server
+=====================
+This document assumes Mac OS X 10.8.4 or better, with Server.app installed. The instructions are largely based on the [Setting up MunkiWebAdmin on OS X](https://code.google.com/p/munki/wiki/MunkiWebAdminOSXSetup) by Greg Neagle.
+Additional information gleaned from [Running Django webapps with OS X Server.app](http://jelockwood.blogspot.com/2013/06/running-django-webapps-with-os-x.html) and [Running Crypt Server on a Mac via Server.app](http://jelockwood.blogspot.com/2013/07/running-crypt-server-on-mac-via.html) by John Lockwood.
+=====================
+This is a work-in-progress, and should not be considered complete! Do not attempt on production servers!
+=====================
+
+##Install Prerequisites
+###Setup the Virtual Environment
+
+Install Xcode, or at least the Command Line Tools for Xcode if they are available. Make sure to get the right one for your version of OS X. These can be found on developer.apple.com. Xcode can be found on the Mac App Store. (Specifically you need git, so you might be able to get by with just a git install...)
+	
+Make sure virtualenv is installed
+
+	virtualenv --version
+	
+If it's not, install it:
+
+	sudo easy_install virtualenv==1.10.1
+
+###Create a non-admin service account and group
+It's not a good idea to run the Sal webapp as root, and you probably don't want to run it as an existing user (like yourself). So we will create a dedicated service account for this application.
+
+Create the saluser account:
+
+Open System Preferences and go to Users & Groups.
+Create a Standard user named saluser.
+(We're using the Users & Groups or Accounts preference pane to create the user so that an unused UID and useful defaults will be assigned automatically. If you want to create the user via command-line, feel free, but make sure all the required attributes are populated! The details are not documented here.)
+
+Create the Sal group:
+
+	sudo dseditgroup -o create -n . salgroup
+	
+Add saluser to the salgroup group:
+
+	sudo dseditgroup -o edit -a saluser -t user salgroup
+
+##Create the virtual environment
+When a virtualenv is created, pip will also be installed to manage a virtualenv's local packages. Create a virtualenv which will handle installing Django in a contained environment. In this example we'll create a virtualenv for Sal at /usr/local. This should be run from Bash, as this is what the virtualenv activate script expects.
+
+Go to where we're going to install the virtualenv:
+
+	 cd /usr/local
+	 
+Create the virtualenv for Sal:
+	
+	sudo virtualenv sal_env
+	
+Make sure saluser has permissions to the new sal_env folder:
+
+	sudo chgrp -R salgroup sal_env
+	sudo chmod -R g+rw sal_env
+	
+Switch to the service account:
+	
+	su saluser
+	
+Virtualenv needs to be run from a bash prompt, so let's switch to one (if you've changed the default):
+
+	bash
+	
+Now we can activate the virtualenv:
+	
+	cd sal_env
+	source bin/activate
+	
+##Copy and configure Sal
+Still inside the sal_env virtualenv, use git to clone the current version of Sal
+
+	git clone https://github.com/grahamgilbert/sal.git sal
+
+Now we need to get the other components for Sal (Django, etc)
+
+	pip install -r sal/setup/requirements.txt
+	
+Next we need to make a copy of the example_settings.py file and put in your info:
+
+	cd sal/sal
+	cp example_settings.py settings.py
+	
+Edit settings.py:
+
+* Set ADMINS to an administrative name and email
+* Set TIME_ZONE to the appropriate timezone
+* Modify DISPLAY_NAME to what you want the header to be
+* This is enough to get you going. See [Settings.md](https://github.com/grahamgilbert/sal/blob/master/docs/Settings.md) for more options in detail.
+
+###More Setup
+We need to use Django's manage.py to initialise the app's database and create an admin user. Running the syncdb command will ask you to create an admin user - make sure you do this! If you are running Sal in a large environment, it is recommended you use MySQL rather than the default SQLite database. If this is the case, follow the [guide on setting up MySQL before continuing](https://github.com/grahamgilbert/sal/blob/master/docs/Using_mysql_on_ubuntu.md).
+
+	cd ..
+	python manage.py syncdb
+	python manage.py migrate
+	
+Stage the static files (type yes when prompted)
+	
+	python manage.py collectstatic
+	
+Test the web service
+	
+	python manage.py runserver 0.0.0.0:8000
+	
+	You should be able to access Sal at 127.0.0.1:8000, logging in with the account you created earlier. Once you are satisfied, return to the Terminal session and enter Ctrl-C to end the test process. See below for instructions in creating a persistent process in its own environment.
+	
+To make sure no one can log in with this account interactively, we will change a few attributes in the user record. Run the following commands in Terminal:
+
+	sudo dscl . create /Users/saluser home /var/empty
+	sudo dscl . create /Users/saluser passwd *
+
+
+##Configure a LaunchDaemon to run Sal
+
+Create the following as /Library/LaunchDaemons/com.grahamgilbert.sal.plist
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.grahamgilbert.sal</string>
+        <key>ProgramArguments</key>
+        <array>
+                <string>/usr/local/sal_env/bin/python</string>
+                <string>/usr/local/sal_env/sal/manage.py</string>
+                <string>runserver</string>
+                <string>0.0.0.0:8000</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/usr/local/sal_env/log/sal.log</string>
+        <key>StandardOutPath</key>
+        <string>/usr/local/sal_env/log/sal.log</string>
+        <key>UserName</key>
+        <string>saluser</string>
+</dict>
+</plist>
+
+Set ownership of the plist to root:wheel and mode to 644.
+
+Restart the server or you can manually load it with:
+
+	sudo launchctl load /Library/LaunchDaemons/com.grahamgilbert.sal.plist
+
