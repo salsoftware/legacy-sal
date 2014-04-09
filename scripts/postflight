@@ -22,6 +22,7 @@ import yaml
 import bz2
 import os
 import sys
+import distutils.version
 BUNDLE_ID = 'com.grahamgilbert.sal'
 
 def get_disk_size(path='/'):
@@ -135,7 +136,17 @@ except:
 
 # if Facter is installed, perform a run
 try:
+    use_external = False
+    if os.path.exists('/usr/local/sal/external'):
+        command = ['/usr/bin/facter', '--version']
+        task = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (stdout, stderr) = task.communicate()
+        if stdout:
+            use_external = distutils.version.LooseVersion(stdout) >= distutils.version.LooseVersion("1.7")
+
     command = ['/usr/bin/facter', '--puppet', '--yaml']
+    if use_external:
+        command = command + ['--external-dir', '/usr/local/sal/external']
     task = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout, stderr) = task.communicate()
     if stdout:
