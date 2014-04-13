@@ -112,6 +112,10 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL }}jquery.dataTables.min.js"></script>
+
+    <!-- refresh page every 5 minutes -->
+<script type="text/javascript" charset="utf-8">window.setTimeout(function(){location.reload(true)}, 1000*60*5);</script>
+
 {% bootstrap_javascript_tag %}
 
 <script type="text/javascript" src="{{ STATIC_URL }}datatables-bootstrap.js"></script>
