@@ -1,5 +1,41 @@
 # Django settings for sal project.
 import os
+
+USE_LDAP = False
+# LDAP authentication support                                                       
+if USE_LDAP:
+    import ldap
+    from django_auth_ldap.config import LDAPSearch, PosixGroupType
+
+    # LDAP settings                                                                 
+    AUTH_LDAP_SERVER_URI = "ldap://foo.example.com"
+    AUTH_LDAP_BIND_DN = ""
+    AUTH_LDAP_BIND_PASSWORD = ""
+    AUTH_LDAP_USER_SEARCH = LDAPSearch(
+        "ou=People,o=ExampleCorp,c=US",
+        ldap.SCOPE_SUBTREE, "(uid=%(user)s)")
+    AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+        "ou=Groups,o=ExampleCorp,c=US",
+        ldap.SCOPE_SUBTREE, "(objectClass=posixGroup)")
+    AUTH_LDAP_GROUP_TYPE = PosixGroupType()
+    AUTH_LDAP_FIND_GROUP_PERMS = True
+    AUTH_LDAP_USER_ATTR_MAP = {"first_name": "givenName",
+                               "last_name": "sn",
+                               "email": "mail"}
+    # Cache group memberships for an hour to minimize LDAP traffic                  
+    AUTH_LDAP_CACHE_GROUPS = True
+    AUTH_LDAP_GROUP_CACHE_TIMEOUT = 3600
+
+if USE_LDAP:
+    AUTHENTICATION_BACKENDS = (
+        'django_auth_ldap.backend.LDAPBackend',
+        'django.contrib.auth.backends.ModelBackend',
+    )
+else:
+    AUTHENTICATION_BACKENDS = (
+        'django.contrib.auth.backends.ModelBackend',
+    )
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 APPEND_SLASH=False
