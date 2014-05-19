@@ -171,6 +171,7 @@ class Machine(models.Model):
         return self.hostname
     class Meta:
         ordering = ['hostname']
+
 class Fact(models.Model):
     machine = models.ForeignKey(Machine)
     fact_name = models.TextField()
@@ -179,6 +180,16 @@ class Fact(models.Model):
         return self.fact_name
     class Meta:
         ordering = ['fact_name']
+
+class HistoricalFact(models.Model):
+    machine = models.ForeignKey(Machine)
+    fact_name = models.TextField()
+    fact_data = models.TextField()
+    fact_recorded = models.DateTimeField(db_index=True)
+    def __unicode__(self):
+        return self.fact_name
+    class Meta:
+        ordering = ['fact_name', 'fact_recorded']
 
 class Condition(models.Model):
     machine = models.ForeignKey(Machine)
