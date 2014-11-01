@@ -23,7 +23,7 @@ import yaml
 import bz2
 import os
 import sys
-BUNDLE_ID = 'com.grahamgilbert.sal'
+BUNDLE_ID = 'com.salsoftware.sal'
 
 def get_disk_size(path='/'):
     """Returns total disk size in KBytes.
@@ -53,7 +53,7 @@ def getconsoleuser():
 
 def set_pref(pref_name, pref_value):
     """Sets a preference, writing it to
-        /Library/Preferences/com.grahamgilbert.sal.plist.
+        /Library/Preferences/com.salsoftware.sal.plist.
         This should normally be used only for 'bookkeeping' values;
         values that control the behavior of munki may be overridden
         elsewhere (by MCX, for example)"""
@@ -69,8 +69,8 @@ def pref(pref_name):
     """Return a preference. Since this uses CFPreferencesCopyAppValue,
     Preferences can be defined several places. Precedence is:
         - MCX
-        - /var/root/Library/Preferences/com.grahamgilbert.sal.plist
-        - /Library/Preferences/com.grahamgilbert.sal.plist
+        - /var/root/Library/Preferences/com.salsoftware.sal.plist
+        - /Library/Preferences/com.salsoftware.sal.plist
         - default_prefs defined here.
     """
     default_prefs = {
