@@ -3,11 +3,11 @@ include /usr/local/share/luggage/luggage.make
 PACKAGE_VERSION=0.2.0
 TITLE=sal_scripts
 PACKAGE_NAME=sal_scripts
-REVERSE_DOMAIN=com.salsoftware
+REVERSE_DOMAIN=com.grahamgilbert
 PAYLOAD=\
 	pack-yaml \
 	pack-sal-submit
-	
+
 pack-yaml: l_usr_local
 	@sudo mkdir -p ${WORK_D}/usr/local/sal/yaml
 	@sudo ${CP} -R yaml ${WORK_D}/usr/local/sal
