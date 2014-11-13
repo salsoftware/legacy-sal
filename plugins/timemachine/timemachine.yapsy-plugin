@@ -1,0 +1,9 @@
+[Core]
+Name = TimeMachine
+Module = timemachine
+
+[Documentation]
+Author = Daniel Hazelbaker
+Version = 0.1
+Website = http://lotsofplugins.com
+Description = Show stats of Time Machine on computers.
