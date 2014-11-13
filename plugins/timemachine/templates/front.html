@@ -1,0 +1,56 @@
+<div class="span4">
+    <legend>{{ title }}</legend>
+    <table class="table table-striped table-condensed table-bordered">
+        <tr>
+            <td>
+                {% if tm_configured %}<a href="{% url 'machine_list_front' 'TimeMachine' 'configured' %}">{% endif %}
+                TimeMachine configured
+                <span class="badge badge-info pull-right">
+                    {{ tm_configured }}
+                </span>
+                {% if tm_configured %}</a>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {% if tm_notconfigured %}<a href="{% url 'machine_list_front' 'TimeMachine' 'notconfigured' %}">{% endif %}
+                TimeMachine not configured
+                <span class="badge badge-warning pull-right">
+                    {{ tm_notconfigured }}
+                </span>
+                {% if tm_notconfigured %}</a>{% endif %}
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                {% if tm_recent_ok %}<a href="{% url 'machine_list_front' 'TimeMachine' 'recent_ok' %}">{% endif %}
+                Backed up < 7 days ago
+                <span class="badge badge-success pull-right">
+                    {{ tm_recent_ok }}
+                </span>
+                {% if tm_recent_ok %}</a>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {% if tm_recent_warning %}<a href="{% url 'machine_list_front' 'TimeMachine' 'recent_warning' %}">{% endif %}
+                Backed up between 7 and 28 days ago
+                <span class="badge badge-warning pull-right">
+                    {{ tm_recent_warning }}
+                </span>
+                {% if tm_recent_warning %}</a>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {% if tm_recent_error %}<a href="{% url 'machine_list_front' 'TimeMachine' 'recent_error' %}">{% endif %}
+                Backed up > 28 days ago
+                <span class="badge badge-important pull-right">
+                    {{ tm_recent_error }}
+                </span>
+                {% if tm_recent_error %}</a>{% endif %}
+            </td>
+        </tr>
+    </table>
+</div>
