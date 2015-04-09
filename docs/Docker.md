@@ -57,6 +57,6 @@ $ docker run -d --name="sal"\
   -e DB_NAME=sal \
   -e DB_USER=admin \
   -e DB_PASS=password \
-  -e TZ=Region/City \
+  -e DOCKER_SAL_TZ=Region/City \
   macadmins/sal
   ```
