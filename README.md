@@ -1,3 +1,23 @@
+#Endsight
+Enabled multitenant mode.   Not directly releated to SAL Server... pkg'd FACTER as extracted from PUPPET ONENSOURCE CODE.   This allows for adavanced reporting.   Client UIDs are being used, until I can think of a more 'automagic' solution.
+
+Larry --> Working on post-flight script ... have not committed.   
+
+  1. Gathers FACTERs
+  2. Checks SMART
+  3. Check DC membership
+  4. Records Mapped Drives.
+  5. others...
+
+
+Server Side:
+  1. Serial --> Explicit Model Number conversion / Warranty / Build Date
+    * Apple-Care check works but is linked to my (expired cert) Service Source account... it still works!!! :)
+  2. CWID is equal to SAL Client name, and is equal to Munki SITE variable.
+    *Allows for future sync capabilites with both CW and Kaseya.
+-------------------------------
+
+
 # Sal
 
 Sal is a multi-tenanted reporting dashboard for [Munki](https://code.google.com/p/munki/) with the ability to display information from [Facter](http://puppetlabs.com/facter). It has a plugin system allowing you to easily build widgets to display your custom information from Facter or Munki's [conditional items](https://code.google.com/p/munki/wiki/ConditionalItems) (or both!).
