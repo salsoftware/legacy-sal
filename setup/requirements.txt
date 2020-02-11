@@ -1,4 +1,4 @@
-Django==1.5.3
+Django==1.11.28
 South==0.8.2
 Yapsy==1.10.223
 django-bootstrap3==4.11.0
